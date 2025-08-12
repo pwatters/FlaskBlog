@@ -1,0 +1,93 @@
+# FlaskBlog Deployment to Azure App Service (Linux) via GitHub Actions
+
+This guide explains how to deploy FlaskBlog from GitHub to Azure App Service (Linux) using the Azure Portal.
+
+---
+
+## 1. Prepare your GitHub repository
+1. Ensure your repo has the following files at the **root**:
+   - `app.py` (must expose a WSGI callable named `app`)
+   - `requirements.txt` containing:
+     ```
+     Flask>=3.0.0
+     Flask-SQLAlchemy>=3.1.1
+     gunicorn>=21.2
+     ```
+   - `templates/` and `static/` folders
+2. (Optional) Add a health endpoint for testing:
+   ```python
+   # health.py
+   from app import app
+   @app.route("/health")
+   def health():
+       return "ok", 200
+   ```
+   Commit and push your changes.
+
+---
+
+## 2. Create the Azure Web App (Linux)
+1. Go to **portal.azure.com** → **Create a resource** → **Web App**.
+2. **Project details**:
+   - Subscription: Your subscription
+   - Resource group: **Create new** (e.g., `flaskblog-rg`)
+3. **Instance details**:
+   - Name: Globally unique (e.g., `flaskblog-abc123`)
+   - Publish: **Code**
+   - Runtime stack: **Python 3.12** (or your desired version)
+   - Operating System: **Linux**
+   - Region: Choose your region (e.g., Australia East)
+4. **App Service plan**:
+   - Create new (e.g., `flaskblog-plan`)
+   - SKU/Size: **B1** (Basic) is fine for demos
+5. Click **Review + Create** → **Create**.
+
+---
+
+## 3. Configure environment variables
+1. In the Web App, go to **Settings → Environment variables** (or **Configuration** in some UIs).
+2. On the **Application settings** tab, click **+ Add** for each:
+   - `SECRET_KEY` → `replace-me`
+   - `ADMIN_TOKEN` → `replace-me`
+   - `SCM_DO_BUILD_DURING_DEPLOYMENT` → `true`
+3. Click **Apply** and confirm the restart.
+
+---
+
+## 4. Connect GitHub Actions
+1. In the Web App, go to **Deployment → Deployment Center**.
+2. Source: **GitHub** → Authorize if prompted.
+3. Choose your **Org / Repo / Branch** (e.g., `main`).
+4. Build provider: **GitHub Actions**.
+5. Runtime stack: Python (match your Web App’s Python version).
+6. Click **Save** / **Finish**.
+7. Azure will:
+   - Create a GitHub Actions workflow file in `.github/workflows/`
+   - Add a Publish Profile secret to your repo.
+
+---
+
+## 5. Deploy and test
+1. In GitHub, push a commit (even a README change) to trigger the workflow.
+2. Wait for the **Actions** run to go green.
+3. Browse to:
+   - `https://<your-app>.azurewebsites.net/`
+   - Health check: `https://<your-app>.azurewebsites.net/health` (if you added it)
+   - Admin create: `https://<your-app>.azurewebsites.net/create?token=<your ADMIN_TOKEN>`
+
+---
+
+## 6. Troubleshooting
+- **`gunicorn: command not found`** → Add `gunicorn` to `requirements.txt`.
+- **`ModuleNotFoundError: flask`** → Ensure `requirements.txt` is in repo root and `SCM_DO_BUILD_DURING_DEPLOYMENT=true` is set.
+- **HTTP 500 / blank page** → Web App → **Monitoring → Log stream** for errors.
+- **Wrong OS**:
+  - Check in Web App **Overview** → Operating System.
+  - If Windows, recreate as Linux for simpler Flask deployment.
+
+---
+
+## Notes
+- SQLite DB is stored in `/home/site/wwwroot` and persists across restarts on Linux App Service.
+- For production or scale-out, switch to a managed database (e.g., Azure PostgreSQL) and update `SQLALCHEMY_DATABASE_URI`.
+- You don’t need to manually set a Startup Command on Linux if `app.py` has `app` callable — Azure detects it and runs with Gunicorn automatically.
