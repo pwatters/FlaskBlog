@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>{{ 'New Post' if mode == 'create' else 'Edit Post' }}</h1>
+  <form method="post">
+    <label>Title</label>
+    <input type="text" name="title" value="{{ post.title if post else '' }}" required>
+    <label>Body</label>
+    <textarea name="body" rows="12" required>{{ post.body if post else '' }}</textarea>
+    <input type="hidden" name="token" value="{{ token or '' }}">
+    <button type="submit">{{ 'Create' if mode == 'create' else 'Save' }}</button>
+    <a class="btn" href="{{ url_for('index') }}">Cancel</a>
+  </form>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="toolbar">
+  <a class="btn" href="{{ url_for('create_post', token=request.args.get('token')) }}">+ New Post</a>
+</div>
+{% if posts %}
+  <ul class="post-list">
+    {% for post in posts %}
+      <li>
+        <h2><a href="{{ url_for('post_detail', post_id=post.id) }}">{{ post.title }}</a></h2>
+        <small>{{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+        <p>{{ post.body[:200] }}{% if post.body|length > 200 %}...{% endif %}</p>
+        <div class="actions">
+          <a href="{{ url_for('edit_post', post_id=post.id, token=request.args.get('token')) }}">Edit</a>
+          <form action="{{ url_for('delete_post', post_id=post.id) }}" method="post" style="display:inline;">
+            <input type="hidden" name="token" value="{{ request.args.get('token') or '' }}">
+            <button type="submit" onclick="return confirm('Delete this post?');">Delete</button>
+          </form>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No posts yet. Be the first to <a href="{{ url_for('create_post', token=request.args.get('token')) }}">create one</a>.</p>
+{% endif %}
+{% endblock %}
